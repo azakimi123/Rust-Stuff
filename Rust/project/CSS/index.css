@@ -33,6 +33,13 @@ body {
     font-weight: 300;
 }
 
+.lvt-logo{
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 50%;
+}
+
 :focus {
     outline: 0;
 }
@@ -45,7 +52,7 @@ body {
     background: #fff;
     margin: 130px 0 40px 0;
     position: relative;
-    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2),
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
                 0 25px 50px 0 rgba(0, 0, 0, 0.1);
 }
 
@@ -289,6 +296,15 @@ body {
     font-weight: 300;
 }
 
+.test {
+    color:black;
+    cursor:pointer;
+}
+
+.test:hover{
+    text-decoration: underline;
+}
+
 .filters {
     margin: 0;
     padding: 0;
@@ -331,6 +347,8 @@ html .clear-completed:active {
 .clear-completed:hover {
     text-decoration: underline;
 }
+
+
 
 .info {
     margin: 65px auto 0;

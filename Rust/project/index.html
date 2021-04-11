@@ -4,10 +4,20 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/index.css">
 </head>
 
 <body>
-    <section id="app"></section>
+    <img class="lvt-logo" src="https://cameras.liveviewtech.com/img/LVLogo_small.png" alt="LiveView Technologies Logo"/>
+    <section class="todoapp"></section>
+
+    <footer class="info">
+        <p>Press Enter To Add A Todo</p>
+        <p>Created by <a href="https://kavik.cz">Martin Kavík</a> from reference code and tutorials</p>
+        <p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
+    </footer>
+
     <script type="module">
         import init from '/pkg/package.js';
         init('/pkg/package_bg.wasm');

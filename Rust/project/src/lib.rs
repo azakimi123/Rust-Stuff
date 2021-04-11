@@ -9,11 +9,14 @@ use seed::{prelude::*, *};
 
 
 use std::collections::BTreeMap;
+use std::mem;
 
 
 use strum_macros::EnumIter;
 use strum::IntoEnumIterator;
 use ulid::Ulid;
+
+const ENTER_KEY: &str = "Enter";
 
 // ------ ------
 //     Init
@@ -68,30 +71,35 @@ enum Filter {
     Completed,
  }
 
-// TODO: Remove
+// Data to be displayed at start
 impl Model {
     fn add_mock_data(mut self) -> Self {
-        let (id_a, id_b) = (Ulid::new(), Ulid::new());
+        let (id_a, id_b, id_c, id_d) = (Ulid::new(), Ulid::new(), Ulid::new(), Ulid::new());
         
         self.todos.insert(id_a, Todo {
             id: id_a,
-            title: "I'm todo A".to_owned(),
+            title: "Do Right".to_owned(),
             completed: false,
         });
 
         self.todos.insert(id_b, Todo {
             id: id_b,
-            title: "I'm todo B".to_owned(),
-            completed: true,
+            title: "Be The Crew".to_owned(),
+            completed: false,
+        });
+        
+        self.todos.insert(id_c, Todo {
+            id: id_c,
+            title: "Own It".to_owned(),
+            completed: false,
         });
 
-        self.new_todo_title = "I'm a new todo title".to_owned();
-
-        self.selected_todo = Some(SelectedTodo {
-            id: id_b,
-            title: "I'm better todo B".to_owned(),
-            input_element: ElRef::new(),
+        self.todos.insert(id_d, Todo {
+            id: id_d,
+            title: "Chew The Strap".to_owned(),
+            completed: false,
         });
+
         self
     }
 }
@@ -141,18 +149,33 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
             log!("UrlChanged", url);
         }
         Msg::NewTodoTitleChanged(title) => {
-            log!("NewTodoTitleChanged", title);
+            model.new_todo_title = title;
+            // log!("NewTodoTitleChanged", title);
         }
     
         // ------ Basic Todo operations ------
 
         Msg::CreateTodo => {
+            let title = model.new_todo_title.trim();
+            if not(title.is_empty()){
+                let id = Ulid::new();
+                model.todos.insert(id, Todo {
+                    id,
+                    title: title.to_owned(),
+                    completed: false,
+                });
+                model.new_todo_title.clear();
+            }
             log!("CreateTodo");
         }
         Msg::ToggleTodo(id) => {
+            if let Some(todo) = model.todos.get_mut(&id) {
+                todo.completed = not(todo.completed);
+            }
             log!("ToggleTodo");
         }
         Msg::RemoveTodo(id) => {
+            model.todos.remove(&id);
             log!("RemoveTodo");
         }
         
@@ -162,6 +185,11 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
             log!("CheckOrUncheckAll");
         }
         Msg::ClearCompleted => {
+            //Todo: Refractor with 'BTreeMap::drain_filter' once stable.
+            model.todos = mem::take(&mut model.todos)
+                .into_iter()
+                .filter(|(_, todo) | not(todo.completed))
+                .collect();
             log!("ClearCompleted");
         }
         
@@ -200,13 +228,16 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
 
 fn view_header(new_todo_title: &str) -> Node<Msg> {
     header![C!["header"],
-        h1!["todos"],
         input![C!["new-todo"],
             attrs!{
                 At::Placeholder => "What needs to be done?", 
                 At::AutoFocus => AtValue::None,
                 At::Value => new_todo_title,
             },
+            input_ev(Ev::Input, Msg::NewTodoTitleChanged),
+            keyboard_ev(Ev::KeyDown, |keyboard_event| {
+                IF!(keyboard_event.key() == ENTER_KEY => Msg::CreateTodo)
+            })
         ]
     ]
 }
@@ -237,6 +268,7 @@ fn view_toggle_all(todos: &BTreeMap<Ulid, Todo>) -> Vec<Node<Msg>> {
 fn view_todo_list(todos: &BTreeMap<Ulid, Todo>, selected_todo: Option<&SelectedTodo>) -> Node<Msg> {
     ul![C!["todo-list"],
         todos.values().map(|todo| {
+            let id = todo.id;
             let is_selected = Some(todo.id) == selected_todo.map(|selected_todo| selected_todo.id);
 
             // These are here just to show the structure of the list items
@@ -244,9 +276,14 @@ fn view_todo_list(todos: &BTreeMap<Ulid, Todo>, selected_todo: Option<&SelectedT
             li![C![IF!(todo.completed => "completed"), IF!(is_selected => "editing")],
                 el_key(&todo.id),
                 div![C!["view"],
-                    input![C!["toggle"], attrs!{At::Type => "checkbox", At::Checked => AtValue::None}],
-                    label!["Taste JavaScript"],
-                    button![C!["destroy"]],
+                input![C!["toggle"], 
+                    attrs!{At::Type => "checkbox", At::Checked => todo.completed.as_at_value()},
+                    ev(Ev::Change, move |_| Msg::ToggleTodo(id)),
+                ],
+                    label![&todo.title],
+                    button![C!["destroy"],
+                        ev(Ev::Click, move |_| Msg::RemoveTodo(id))
+                        ],
                 ],
                 IF!(is_selected => {
                     let selected_todo = selected_todo.unwrap();
@@ -267,37 +304,15 @@ fn view_footer(todos: &BTreeMap<Ulid, Todo>, selected_filter: Filter) -> Node<Ms
     let active_count = todos.len() - completed_count;
 
     footer![C!["footer"],
-        // This should be `0 items left` by default
-        span![C!["todo-count"],
-            strong![active_count],
-            format!("item{} left", if active_count == 1 { "" } else { "s" }),
-        ],
-        view_filters(selected_filter),
-        // Hidden if no completed items are left ↓
-        IF!(completed_count > 0 => 
-            button![C!["clear-completed"],
-            "Clear completed"
-        ])
+    // This should be `0 items left` by default
+    span![C!["todo-count"],
+    strong![active_count],
+    format!(" item{} left", if active_count == 1 { "" } else { "s" }),
     ]
+    ]
+
 }
 
-fn view_filters(selected_filter: Filter) -> Node<Msg> {
-    ul![C!["filters"],
-        Filter::iter().map(|filter| {
-            let (link, title) = match filter {
-                Filter::All => ("#/", "All"),
-                Filter::Active => ("#/active", "Active"),
-                Filter::Completed => ("#/completed", "Completed"),
-            };
-            li![
-                a![C![IF!(filter == selected_filter => "selected")],
-                    attrs!{At::Href => link},
-                    title,
-                ],
-            ]
-        })
-    ]
-}
 
 // ------ ------
 //     Start
